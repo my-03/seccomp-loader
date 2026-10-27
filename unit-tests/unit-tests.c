@@ -26,6 +26,10 @@ static void test_must_read_and_validate_header_from_file__happy(void)
 	FILE *file =
 	    sc_must_read_and_validate_header_from_file(profile, &hdr);
 	g_assert_true(file != NULL);
+  fclose(file);
+  close(fd);
+  unlink(profile);
+  g_free(profile);
 }
 
 static void test_must_read_and_validate_header_from_file__invalid_magic(void)
