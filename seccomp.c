@@ -41,6 +41,25 @@ FILE* sc_must_read_and_validate_header_from_file(const char *profile_path, struc
 	if (num_read < sizeof(struct sc_seccomp_file_header)) {
 		die("short read on seccomp header: %zu", num_read);
 	}
+
+	/* Validate the seccomp profile header */
+	if (hdr->header[0] != 'S' || hdr->header[1] != 'C') {
+		die("invalid seccomp header");
+	}
+
+	if (hdr->version != 1) {
+		die("unsupported seccomp version");
+	}
+
+	if (hdr->unrestricted > 1) {
+		die("invalid unrestricted flag");
+	}
+
+	if (hdr->len_filter == 0 ||
+	    hdr->len_filter > MAX_BPF_SIZE ||
+	    hdr->len_filter % sizeof(struct sock_filter) != 0) {
+		die("invalid seccomp filter length");
+	}
 	return file;
 }
 

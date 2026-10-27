@@ -17,6 +17,7 @@ static void test_must_read_and_validate_header_from_file__happy(void)
 		.header[0] = 'S',
 		.header[1] = 'C',
 		.version = 1,
+    .len_filter = sizeof(struct sock_filter),
 	};
 	char *profile = NULL;
 	int fd = 0;
