@@ -65,18 +65,26 @@ FILE* sc_must_read_and_validate_header_from_file(const char *profile_path, struc
 
 void sc_must_read_filter_from_file(FILE *file, uint32_t len_bytes, struct sock_fprog *prog)
 {
-	prog->len = len_bytes / sizeof(struct sock_filter);
-	prog->filter = (struct sock_filter *)malloc(MAX_BPF_SIZE);
-	if (prog->filter == NULL) {
-		die("cannot allocate %u bytes of memory for seccomp filter ", len_bytes);
+	if (len_bytes == 0 ||
+	    len_bytes > MAX_BPF_SIZE ||
+	    len_bytes % sizeof(struct sock_filter) != 0) {
+		die("invalid seccomp filter length");
 	}
+
+	prog->filter = malloc(len_bytes);
+	if (prog->filter == NULL) {
+		die("cannot allocate %u bytes of memory for seccomp filter", len_bytes);
+	}
+
 	size_t num_read = fread(prog->filter, 1, len_bytes, file);
 	if (ferror(file)) {
 		die("cannot read filter");
 	}
 	if (num_read != len_bytes) {
-		die("short read for filter %zu != %i", num_read, len_bytes);
+		die("short read for filter %zu != %u", num_read, len_bytes);
 	}
+
+	prog->len = len_bytes / sizeof(struct sock_filter);
 }
 
 int seccomp(unsigned int operation, unsigned int flags, void *args) {

@@ -125,6 +125,34 @@ static void test_invalid_filter_length(gconstpointer user_data)
 	g_test_trap_assert_stderr("*invalid seccomp filter length*");
 }
 
+static void test_read_filter__happy(void)
+{
+	FILE *file = tmpfile();
+	g_assert_nonnull(file);
+
+	struct sock_filter filter = {
+		.code = BPF_RET | BPF_K,
+		.k = SECCOMP_RET_ALLOW,
+	};
+
+	g_assert_cmpuint(
+		fwrite(&filter, 1, sizeof(filter), file),
+		==, sizeof(filter));
+
+	rewind(file);
+
+	struct sock_fprog prog = {0};
+
+	sc_must_read_filter_from_file(file, sizeof(filter), &prog);
+
+	g_assert_cmpuint(prog.len, ==, 1);
+	g_assert_nonnull(prog.filter);
+	g_assert_cmpmem(prog.filter, sizeof(filter), &filter, sizeof(filter));
+
+	free(prog.filter);
+	fclose(file);
+}
+
 static void __attribute__((constructor)) init(void)
 {
 	g_test_add_func("/seccomp/must_read_and_validate_header_from_file/happy",
@@ -138,14 +166,14 @@ static void __attribute__((constructor)) init(void)
   g_test_add_data_func("/seccomp/must_read_and_validate_header_from_file/zero_length",
     GUINT_TO_POINTER(0),
     test_invalid_filter_length);
-
   g_test_add_data_func("/seccomp/must_read_and_validate_header_from_file/unaligned_length",
     GUINT_TO_POINTER(sizeof(struct sock_filter) + 1),
     test_invalid_filter_length);
-
   g_test_add_data_func("/seccomp/must_read_and_validate_header_from_file/oversized_length",
     GUINT_TO_POINTER(MAX_BPF_SIZE + sizeof(struct sock_filter)),
     test_invalid_filter_length);
+  g_test_add_func("/seccomp/read_filter/happy",
+		test_read_filter__happy);
 }
 
 int main(int argc, char **argv)
